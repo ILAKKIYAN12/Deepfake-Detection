@@ -116,7 +116,7 @@ def detect_deepfake(video_path, model_path):
 # Run detection
 if __name__ == "__main__":
     VIDEO = "./videos/003_000.mp4"
-    MODEL = "./pretrained_model/ffpp_c23.pth"
+    MODEL = "./pretrained_model/ffpp_c40.pth"
 
     if not os.path.exists(VIDEO):
         print(f"❌ Video not found: {VIDEO}")
