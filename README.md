@@ -24,7 +24,7 @@ using ResNet50 and OpenCV face detection — no dlib required!
 
 ---
 
-##⚠️**Disclaimer**
+##  Disclaimer
 
-  -Add a pretrained Model folder with the video link
-      click here-->:https://drive.google.com/file/d/1zsjZ-Qgrm-F2HWpEEhO1mfJAe9KwjDJE/view?usp=sharing
+  -Add a pretrained Model folder with the video link.
+  -click here-->:https://drive.google.com/file/d/1zsjZ-Qgrm-F2HWpEEhO1mfJAe9KwjDJE/view?usp=sharing
