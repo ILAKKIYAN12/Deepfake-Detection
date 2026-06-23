@@ -20,3 +20,4 @@ using ResNet50 and OpenCV face detection — no dlib required!
 ---
 
 ## 🖥️ Sample Output
+<img width="488" height="257" alt="image" src="https://github.com/user-attachments/assets/688b2bed-3c68-4b67-8f47-3fa11a736fd1" />
