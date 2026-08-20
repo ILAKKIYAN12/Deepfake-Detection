@@ -6,3 +6,7 @@ torchvision
 matplotlib
 Pillow
 scikit-learn
+<<<<<<< HEAD
+=======
+flask
+>>>>>>> df049ba (Updated files and added new components)

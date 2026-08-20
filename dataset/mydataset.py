@@ -1,5 +1,4 @@
 """
-Author: Honggu Liu
 
 """
 

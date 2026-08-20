@@ -102,9 +102,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-pretrained_model/ 
-pretrained_model/ 
-*.pth 
-*.pt 
-*.h5 
-pretrained_model/ 
+uploads/
+pretrained_model/
+*.pth
+*.pt
+*.h5

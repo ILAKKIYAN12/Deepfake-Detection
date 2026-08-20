@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FrameTruth — Deepfake Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@380;500;650;750&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0e1114;
+      --bg-2: #161b20;
+      --ink: #e8ece8;
+      --muted: #9aa39a;
+      --line: rgba(232, 236, 232, 0.1);
+      --gold: #d4b483;
+      --gold-2: #f0d9a8;
+      --real: #6fbf86;
+      --fake: #e06a5c;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: "Outfit", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(212, 180, 131, 0.12), transparent 55%),
+        radial-gradient(900px 500px at -10% 90%, rgba(111, 191, 134, 0.08), transparent 50%),
+        var(--bg);
+    }
+
+    body::before {
+      content: "";
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    body::after {
+      content: "";
+      pointer-events: none;
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      left: -80px;
+      top: 40%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(212,180,131,0.16), transparent 68%);
+      animation: drift 14s ease-in-out infinite;
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, -30px) scale(1.08); }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes pop {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+
+    @keyframes sprocket {
+      from { background-position: 0 0; }
+      to { background-position: 0 20px; }
+    }
+
+    @keyframes scan {
+      0% { top: 8%; opacity: 0; }
+      12% { opacity: 1; }
+      88% { opacity: 1; }
+      100% { top: 88%; opacity: 0; }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(212, 180, 131, 0.35); }
+      50% { box-shadow: 0 0 0 10px rgba(212, 180, 131, 0); }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 1; }
+    }
+
+    .wrap > header { animation: rise 0.7s ease both; }
+    .hero { animation: rise 0.8s 0.1s ease both; }
+    .layout { animation: rise 0.85s 0.2s ease both; }
+    footer { animation: fade 1s 0.45s ease both; }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 22px 64px;
+      position: relative;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 48px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: 0.04em;
+      font-weight: 650;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--gold);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 13px;
+      animation: pulse-glow 2.8s ease-in-out infinite;
+    }
+
+    .chip {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      padding: 6px 10px;
+      border-radius: 999px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chip::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 30%, rgba(212,180,131,0.18), transparent 70%);
+      transform: translateX(-120%);
+      animation: chip-shine 4.5s ease-in-out infinite;
+    }
+
+    @keyframes chip-shine {
+      0%, 55% { transform: translateX(-120%); }
+      80%, 100% { transform: translateX(120%); }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.1rem, 5vw, 3.6rem);
+      font-weight: 750;
+      line-height: 1.08;
+      max-width: 14ch;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin-top: 14px;
+      max-width: 46ch;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.55;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 22px;
+      margin-top: 36px;
+    }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform 0.35s ease, border-color 0.35s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(212, 180, 131, 0.28);
+    }
+
+    .drop {
+      min-height: 360px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.25s, background 0.25s, transform 0.25s;
+      position: relative;
+    }
+
+    .drop::after {
+      content: "";
+      position: absolute;
+      left: 12%;
+      right: 12%;
+      height: 2px;
+      top: 18%;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .drop.over {
+      border-color: var(--gold);
+      background: rgba(212, 180, 131, 0.06);
+      transform: scale(1.01);
+    }
+
+    .drop.over::after,
+    .drop.scanning::after {
+      animation: scan 1.6s ease-in-out infinite;
+      opacity: 1;
+    }
+
+    .drop.scanning {
+      border-color: rgba(212, 180, 131, 0.45);
+    }
+
+    .drop input { display: none; }
+
+    .film {
+      width: 72px;
+      height: 52px;
+      border: 2px solid var(--gold);
+      border-radius: 8px;
+      position: relative;
+      margin-bottom: 18px;
+      animation: floaty 3.2s ease-in-out infinite;
+    }
+
+    .film::before, .film::after {
+      content: "";
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      width: 7px;
+      background:
+        repeating-linear-gradient(to bottom, var(--gold) 0 5px, transparent 5px 10px);
+      animation: sprocket 0.8s linear infinite;
+    }
+    .film::before { left: 5px; }
+    .film::after { right: 5px; }
+
+    .drop h2 { font-size: 1.35rem; font-weight: 650; }
+    .drop p { color: var(--muted); margin-top: 8px; }
+
+    video#preview {
+      width: 100%;
+      max-height: 280px;
+      border-radius: 14px;
+      background: #000;
+      display: none;
+      margin-bottom: 16px;
+      animation: pop 0.45s ease;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      font-family: inherit;
+      font-weight: 650;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 22px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, opacity 0.2s;
+    }
+
+    button:hover:not(:disabled) { transform: translateY(-2px); }
+    button:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+
+    .primary {
+      background: var(--gold);
+      color: #1a140c;
+    }
+
+    .primary:not(:disabled) {
+      box-shadow: 0 8px 24px rgba(212, 180, 131, 0.22);
+    }
+
+    .primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .ghost:hover { border-color: rgba(212, 180, 131, 0.45); }
+
+    .panel { padding: 26px; min-height: 360px; }
+
+    .panel h3 {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .idle-note {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .status {
+      display: none;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      color: var(--gold-2);
+      animation: fade 0.3s ease;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .scan-track {
+      width: 100%;
+      height: 4px;
+      border-radius: 99px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .scan-track i {
+      display: block;
+      height: 100%;
+      width: 38%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.1s linear infinite;
+    }
+
+    .dots { animation: blink 1.4s ease-in-out infinite; }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(212,180,131,0.25);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .verdict {
+      display: none;
+    }
+
+    .verdict.show { display: block; animation: rise 0.45s ease; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 650;
+      padding: 6px 12px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    .badge.real { background: rgba(111,191,134,0.15); color: var(--real); animation: pop 0.4s ease; }
+    .badge.fake { background: rgba(224,106,92,0.15); color: var(--fake); animation: pop 0.4s ease, pulse-glow 1.8s ease-in-out 2; }
+    .badge.unknown { background: rgba(212,180,131,0.12); color: var(--gold); animation: pop 0.4s ease; }
+
+    .score-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 18px;
+      margin: 8px 0 18px;
+    }
+
+    .score {
+      font-size: 3.4rem;
+      font-weight: 750;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .score span { font-size: 1.2rem; color: var(--muted); }
+
+    .meter {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .meter i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--real), var(--gold), var(--fake));
+      transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      opacity: 0;
+      animation: rise 0.45s ease forwards;
+    }
+
+    .verdict.show .stat:nth-child(1) { animation-delay: 0.08s; }
+    .verdict.show .stat:nth-child(2) { animation-delay: 0.16s; }
+    .verdict.show .stat:nth-child(3) { animation-delay: 0.24s; }
+    .verdict.show .stat:nth-child(4) { animation-delay: 0.32s; }
+
+    .stat b { display: block; font-size: 1.25rem; }
+    .stat span { color: var(--muted); font-size: 0.82rem; }
+
+    .shot {
+      margin-top: 16px;
+      width: 100%;
+      border-radius: 14px;
+      display: none;
+      border: 1px solid var(--line);
+      animation: pop 0.5s ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+      .stat { opacity: 1; }
+    }
+
+    .err {
+      display: none;
+      color: var(--fake);
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    footer {
+      margin-top: 40px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand"><span class="mark">FT</span> FrameTruth</div>
+      <div class="chip">Xception · FaceForensics++</div>
+    </header>
+
+    <section class="hero">
+      <h1>Check a video for deepfakes.</h1>
+      <p>Upload a clip. Faces are sampled frame by frame and classified as real or manipulated. You get a score, a verdict, and a preview of the last labeled face.</p>
+    </section>
+
+    <div class="layout">
+      <div class="card">
+        <div class="drop" id="drop">
+          <input id="file" type="file" accept="video/mp4,video/avi,video/quicktime,video/webm,video/x-matroska" />
+          <video id="preview" controls playsinline></video>
+          <div id="dropHint">
+            <div class="film"></div>
+            <h2>Drop a video here</h2>
+            <p>MP4, MOV, AVI, MKV, or WEBM · up to 120 MB</p>
+          </div>
+          <div class="actions">
+            <button type="button" class="ghost" id="choose">Choose file</button>
+            <button type="button" class="primary" id="analyze" disabled>Analyze video</button>
+            <button type="button" class="ghost" id="clear">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <h3>Forensic report</h3>
+        <p class="idle-note" id="idle">Waiting for a file. Analysis runs on this machine with the local Xception model — nothing is sent to a third-party API.</p>
+        <div class="status" id="status">
+          <div class="status-row"><div class="spinner"></div> Reading faces<span class="dots">…</span></div>
+          <div class="scan-track"><i></i></div>
+          <span style="font-size:0.85rem;color:var(--muted)">This can take a minute on CPU.</span>
+        </div>
+        <p class="err" id="err"></p>
+        <div class="verdict" id="verdict">
+          <div class="badge" id="badge">—</div>
+          <p id="msg"></p>
+          <div class="score-row">
+            <div class="score" id="score">0<span>%</span></div>
+          </div>
+          <div class="meter"><i id="bar"></i></div>
+          <div class="stats">
+            <div class="stat"><b id="real">0</b><span>Real faces</span></div>
+            <div class="stat"><b id="fake">0</b><span>Fake faces</span></div>
+            <div class="stat"><b id="sampled">0</b><span>Frames sampled</span></div>
+            <div class="stat"><b id="total">0</b><span>Video frames</span></div>
+          </div>
+          <img class="shot" id="shot" alt="Annotated frame" />
+        </div>
+      </div>
+    </div>
+
+    <footer>Local demo detector. Haar face crop + Xception. Not a forensic guarantee.</footer>
+  </div>
+
+  <script>
+    const drop = document.getElementById("drop");
+    const fileInput = document.getElementById("file");
+    const preview = document.getElementById("preview");
+    const dropHint = document.getElementById("dropHint");
+    const analyze = document.getElementById("analyze");
+    const clearBtn = document.getElementById("clear");
+    const idle = document.getElementById("idle");
+    const status = document.getElementById("status");
+    const err = document.getElementById("err");
+    const verdict = document.getElementById("verdict");
+    const choose = document.getElementById("choose");
+    let selectedFile = null;
+    let countTimer = null;
+
+    choose.addEventListener("click", (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+    drop.addEventListener("click", (e) => {
+      if (e.target.closest("button, video")) return;
+      fileInput.click();
+    });
+
+    ["dragenter", "dragover"].forEach((ev) => {
+      drop.addEventListener(ev, (e) => {
+        e.preventDefault();
+        drop.classList.add("over");
+      });
+    });
+    ["dragleave", "drop"].forEach((ev) => {
+      drop.addEventListener(ev, (e) => {
+        e.preventDefault();
+        drop.classList.remove("over");
+      });
+    });
+    drop.addEventListener("drop", (e) => {
+      const f = e.dataTransfer.files[0];
+      if (f) setFile(f);
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = "block";
+      preview.style.animation = "none";
+      void preview.offsetWidth;
+      preview.style.animation = "pop 0.45s ease";
+      dropHint.style.display = "none";
+      analyze.disabled = false;
+      hideReport();
+    }
+
+    clearBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      selectedFile = null;
+      fileInput.value = "";
+      preview.removeAttribute("src");
+      preview.style.display = "none";
+      dropHint.style.display = "block";
+      analyze.disabled = true;
+      hideReport();
+    });
+
+    analyze.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!selectedFile) return;
+
+      idle.style.display = "none";
+      err.style.display = "none";
+      verdict.classList.remove("show");
+      status.style.display = "flex";
+      drop.classList.add("scanning");
+      analyze.disabled = true;
+
+      const body = new FormData();
+      body.append("video", selectedFile);
+
+      try {
+        const res = await fetch("/api/detect", { method: "POST", body });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Analysis failed.");
+        }
+        showReport(data);
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.style.display = "block";
+        idle.style.display = "none";
+      } finally {
+        status.style.display = "none";
+        drop.classList.remove("scanning");
+        analyze.disabled = !selectedFile;
+      }
+    });
+
+    function hideReport() {
+      verdict.classList.remove("show");
+      err.style.display = "none";
+      status.style.display = "none";
+      drop.classList.remove("scanning");
+      idle.style.display = "block";
+    }
+
+    function countUp(el, target, suffix) {
+      const end = Number(target) || 0;
+      const start = performance.now();
+      const dur = 900;
+      if (countTimer) cancelAnimationFrame(countTimer);
+      function tick(now) {
+        const t = Math.min(1, (now - start) / dur);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const val = end % 1 ? (eased * end).toFixed(1) : Math.round(eased * end);
+        el.innerHTML = val + (suffix || "");
+        if (t < 1) countTimer = requestAnimationFrame(tick);
+      }
+      countTimer = requestAnimationFrame(tick);
+    }
+
+    function showReport(data) {
+      idle.style.display = "none";
+      verdict.classList.remove("show");
+      void verdict.offsetWidth;
+      verdict.classList.add("show");
+      const badge = document.getElementById("badge");
+      badge.textContent = data.verdict;
+      badge.className = "badge " + (data.verdict === "DEEPFAKE" ? "fake" : data.verdict === "REAL" ? "real" : "unknown");
+      document.getElementById("msg").textContent = data.message;
+      countUp(document.getElementById("score"), data.fake_score ?? 0, "<span>%</span>");
+      document.getElementById("bar").style.width = "0%";
+      requestAnimationFrame(() => {
+        document.getElementById("bar").style.width = Math.min(100, data.fake_score || 0) + "%";
+      });
+      document.getElementById("real").textContent = data.real_count;
+      document.getElementById("fake").textContent = data.fake_count;
+      document.getElementById("sampled").textContent = data.frames_sampled;
+      document.getElementById("total").textContent = data.total_frames;
+      const shot = document.getElementById("shot");
+      if (data.preview) {
+        shot.src = data.preview;
+        shot.style.display = "block";
+      } else {
+        shot.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
